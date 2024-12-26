@@ -189,12 +189,12 @@ void controlMotor(BLDCMotor &motor, MagneticSensorI2C &sensor, float &offset, fl
       motor.move(0);
     }
   } else {
-    if (angle > target_position0) {
-      motor.voltage_limit = power_supply_v;
-      motor.move(full_speed_velocity*direction);
-    } else {
+    if (angle < target_position || angle < reset_position) {
       motor.voltage_limit = 0;
       motor.move(0);
+    } else {
+      motor.voltage_limit = power_supply_v;
+      motor.move(full_speed_velocity*direction);
     }
   }
 }
