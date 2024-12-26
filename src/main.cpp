@@ -44,14 +44,14 @@
 #define   _MON_ANGLE  0b0000001  // monitor angle value
 
 // Constants
-const float target_position0 = 350.0;  // Motor 0 target position
+const float target_position0 = 180.0;  // Motor 0 target position
 const float reset_position0 = 0.0;    // Motor 0 reset position
-const float target_position1 = 350.0; // Motor 1 target position
+const float target_position1 = 180.0; // Motor 1 target position
 const float reset_position1 = 0.0;    // Motor 1 reset position
 const int   direction0 = 1;           // Motor 0 direction of rotation: 1 CW, -1 CCW
 const int   direction1 = -1;          // Motor 1 direction of rotation: 1 CW, -1 CCW
-float full_speed_velocity0 = 20.0;    // Motor 0 full speed velocity
-float full_speed_velocity1 = 20.0;   // Motor 1 full speed velocity
+float full_speed_velocity0 = 50.0;    // Motor 0 full speed velocity
+float full_speed_velocity1 = 50.0;   // Motor 1 full speed velocity
 bool coasting0 = false;               // Motor 0 state: running or coasting
 bool coasting1 = false;               // Motor 1 state: running or coasting
 
@@ -122,10 +122,10 @@ void setup() {
   motor0.useMonitoring(Serial);
   motor1.useMonitoring(Serial);
   // monitor data formatting;
-  motor0.monitor_start_char = 'Motor0: '; //!< monitor starting character
+  motor0.monitor_start_char = '\0'; //!< monitor starting character
   motor0.monitor_end_char = '\0'; //!< monitor outputs ending character 
   motor0.monitor_separator = '\t'; //!< monitor outputs separation character
-  motor1.monitor_start_char = 'Motor1: \0'; //!< monitor starting character
+  motor1.monitor_start_char = '\0'; //!< monitor starting character
   motor1.monitor_end_char = '\0'; //!< monitor outputs ending character 
   motor1.monitor_separator = '\t'; //!< monitor outputs separation character
   //display variables
@@ -181,33 +181,20 @@ void controlMotor(BLDCMotor &motor, MagneticSensorI2C &sensor, float &offset, fl
 {
   float angle = normalizeAngle(sensor.getAngle() * (180.0 / _PI), offset);
   if(direction > 0){
-
-    if (!coasting) {
+    if (angle < target_position || angle < reset_position) {
+      motor.voltage_limit = power_supply_v;
       motor.move(full_speed_velocity*direction);
-      if (angle <= target_position) {
-        motor.voltage_limit = 0;  // Cut power
-        coasting = true;
-      }
     } else {
+      motor.voltage_limit = 0;
       motor.move(0);
-      if (angle >= reset_position - 0.1) {
-        motor.voltage_limit = power_supply_v;  // Reset voltage
-        coasting = false;
-      }
     }
   } else {
-    if (!coasting) {
+    if (angle > target_position0) {
+      motor.voltage_limit = power_supply_v;
       motor.move(full_speed_velocity*direction);
-      if (angle >= target_position) {
-        motor.voltage_limit = 0;  // Cut power
-        coasting = true;
-      }
     } else {
+      motor.voltage_limit = 0;
       motor.move(0);
-      if (angle <= reset_position + 0.1) {
-        motor.voltage_limit = power_supply_v;  // Reset voltage
-        coasting = false;
-      }
     }
   }
 }
