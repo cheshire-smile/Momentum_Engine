@@ -50,8 +50,8 @@ const float target_position1 = 180.0; // Motor 1 target position
 const float reset_position1 = 0.0;    // Motor 1 reset position
 const int   direction0 = 1;           // Motor 0 direction of rotation: 1 CW, -1 CCW
 const int   direction1 = -1;          // Motor 1 direction of rotation: 1 CW, -1 CCW
-float full_speed_velocity0 = 50.0;    // Motor 0 full speed velocity
-float full_speed_velocity1 = 50.0;   // Motor 1 full speed velocity
+float full_speed_velocity0 = 1000.0;    // Motor 0 full speed velocity
+float full_speed_velocity1 = 1000.0;   // Motor 1 full speed velocity
 bool coasting0 = false;               // Motor 0 state: running or coasting
 bool coasting1 = false;               // Motor 1 state: running or coasting
 
@@ -110,8 +110,20 @@ void setup() {
   motor0.foc_modulation = FOCModulationType::SpaceVectorPWM;
   motor1.foc_modulation = FOCModulationType::SpaceVectorPWM;
 
-  motor0.controller = MotionControlType::velocity_openloop;
-  motor1.controller = MotionControlType::velocity_openloop;
+  // Set PID controller for velocity control
+  motor0.controller = MotionControlType::velocity;
+  motor1.controller = MotionControlType::velocity;
+
+  // Set PID parameters
+  motor0.PID_velocity.P = 0.2;  // Proportional gain
+  motor0.PID_velocity.I = 0.1;  // Integral gain
+  motor0.PID_velocity.D = 0.01; // Derivative gain
+  motor0.PID_velocity.output_ramp = 100; // Acceleration limit [rad/s^2]
+
+  motor1.PID_velocity.P = 0.2;
+  motor1.PID_velocity.I = 0.1;
+  motor1.PID_velocity.D = 0.01;
+  motor1.PID_velocity.output_ramp = 100;
 
   motor0.current_limit = M0_motor_current_limit;
   motor1.current_limit = M1_motor_current_limit;
