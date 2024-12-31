@@ -48,8 +48,8 @@ const float target_position0 = 180.0;  // Motor 0 target position
 const float reset_position0 = 0.0;    // Motor 0 reset position
 const float target_position1 = 180.0; // Motor 1 target position
 const float reset_position1 = 0.0;    // Motor 1 reset position
-const int   direction0 = 1;           // Motor 0 direction of rotation: 1 CW, -1 CCW
-const int   direction1 = -1;          // Motor 1 direction of rotation: 1 CW, -1 CCW
+const int   direction0 = -1;           // Motor 0 direction of rotation: 1 CW, -1 CCW
+const int   direction1 = 1;          // Motor 1 direction of rotation: 1 CW, -1 CCW
 float full_speed_velocity0 = 1000.0;    // Motor 0 full speed velocity
 float full_speed_velocity1 = 1000.0;   // Motor 1 full speed velocity
 bool coasting0 = false;               // Motor 0 state: running or coasting
@@ -68,6 +68,9 @@ BLDCDriver3PWM driver0 = BLDCDriver3PWM(M0_phA, M0_phB, M0_phC, M0_En);
 BLDCMotor motor1 = BLDCMotor(M1_pole_pairs, M1_phase_resistance);
 BLDCDriver3PWM driver1 = BLDCDriver3PWM(M1_phA, M1_phB, M1_phC, M1_En);
 
+//Commander interface
+Commander commander = Commander();
+
 // Sensor offsets
 float offset0 = 0.0;
 float offset1 = 0.0;
@@ -81,6 +84,11 @@ void controlMotor(BLDCMotor &motor, MagneticSensorI2C &sensor, float &offset,
                   float full_speed_velocity, int direction, bool &coasting, float target_position, float reset_position);
 float normalizeAngle(float angle, float offset);
 void printPositions();
+
+//commander function prototypes
+void doTarget(char* cmd);
+void doMotor0(char* cmd);
+void doMotor1(char* cmd);
 
 void setup() {
   // Initialize I2C
@@ -130,22 +138,31 @@ void setup() {
 
   // use monitoring with the BLDCMotor
   Serial.begin(115200);
+
+  // Initialize Commander interface
+  commander.add('T', doTarget, "target velocity");
+  commander.add('M', doMotor0, "motor 0");
+  commander.add('N', doMotor1, "motor 1");
+
   // monitoring port
   motor0.useMonitoring(Serial);
   motor1.useMonitoring(Serial);
-  // monitor data formatting;
-  motor0.monitor_start_char = '\0'; //!< monitor starting character
-  motor0.monitor_end_char = '\0'; //!< monitor outputs ending character 
-  motor0.monitor_separator = '\t'; //!< monitor outputs separation character
-  motor1.monitor_start_char = '\0'; //!< monitor starting character
-  motor1.monitor_end_char = '\0'; //!< monitor outputs ending character 
-  motor1.monitor_separator = '\t'; //!< monitor outputs separation character
-  //display variables
-  motor0.monitor_variables = _MON_TARGET | _MON_VEL | _MON_ANGLE; // default _MON_TARGET | _MON_VOLT_Q | _MON_VEL | _MON_ANGLE
-  motor1.monitor_variables = _MON_TARGET | _MON_VEL | _MON_ANGLE; // default _MON_TARGET | _MON_VOLT_Q | _MON_VEL | _MON_ANGLE
-  // downsampling
-  motor0.monitor_downsample = 100; // default 10
-  motor1.monitor_downsample = 100; // default 10
+
+  // // monitor data formatting;
+  // motor0.monitor_start_char = '\0'; //!< monitor starting character
+  // motor0.monitor_end_char = '\0'; //!< monitor outputs ending character 
+  // motor0.monitor_separator = '\t'; //!< monitor outputs separation character
+  // motor1.monitor_start_char = '\0'; //!< monitor starting character
+  // motor1.monitor_end_char = '\0'; //!< monitor outputs ending character 
+  // motor1.monitor_separator = '\t'; //!< monitor outputs separation character
+
+  // //display variables
+  // motor0.monitor_variables = _MON_TARGET | _MON_VEL | _MON_ANGLE; // default _MON_TARGET | _MON_VOLT_Q | _MON_VEL | _MON_ANGLE
+  // motor1.monitor_variables = _MON_TARGET | _MON_VEL | _MON_ANGLE; // default _MON_TARGET | _MON_VOLT_Q | _MON_VEL | _MON_ANGLE
+
+  // // downsampling
+  // motor0.monitor_downsample = 100; // default 10
+  // motor1.monitor_downsample = 100; // default 10
 
   motor0.init();
   motor1.init();
@@ -157,7 +174,7 @@ void setup() {
   //get the motors moving first
   motor0.voltage_limit = power_supply_v;
   motor1.voltage_limit = power_supply_v;
-  float steps=10000;
+  float steps=1000;
   for (int i; i<=(steps); i++){
 
     motor0.move(full_speed_velocity0*direction0);
@@ -187,6 +204,9 @@ void loop() {
   // Output motor monitor data, comment out when not debugging, will impact performance.
   motor0.monitor();
   motor1.monitor();
+
+  //Process Commander interface commands
+  commander.run();
 }
 
 void controlMotor(BLDCMotor &motor, MagneticSensorI2C &sensor, float &offset, float full_speed_velocity, int direction, bool &coasting, float target_position, float reset_position) 
@@ -227,4 +247,18 @@ void printPositions() {
   Serial.print("°, Sensor1 angle: ");
   Serial.print(angle1, 2);  // Print with 2 decimal places
   Serial.println("°");
+}
+
+// Commander callback functions
+void doTarget(char* cmd) {
+  commander.scalar(&motor0.target, cmd);
+  commander.scalar(&motor1.target, cmd);
+}
+
+void doMotor0(char* cmd){
+  commander.motor(&motor0, cmd);
+}
+
+void doMotor1(char* cmd){
+  commander.motor(&motor1, cmd);
 }
