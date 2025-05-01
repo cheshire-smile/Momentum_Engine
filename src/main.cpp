@@ -48,7 +48,7 @@ const float target_position0 = 180.0;  // Motor 0 target position
 const float reset_position0 = 0.0;    // Motor 0 reset position
 const float target_position1 = 180.0; // Motor 1 target position
 const float reset_position1 = 0.0;    // Motor 1 reset position
-const int   direction0 = -1;           // Motor 0 direction of rotation: 1 CW, -1 CCW
+const int   direction0 = -11;           // Motor 0 direction of rotation: 1 CW, -1 CCW
 const int   direction1 = 1;          // Motor 1 direction of rotation: 1 CW, -1 CCW
 float full_speed_velocity0 = 1000.0;    // Motor 0 full speed velocity
 float full_speed_velocity1 = 1000.0;   // Motor 1 full speed velocity
@@ -202,8 +202,8 @@ void loop() {
   motor1.loopFOC();
 
   // Output motor monitor data, comment out when not debugging, will impact performance.
-  motor0.monitor();
-  motor1.monitor();
+  //motor0.monitor();
+  //motor1.monitor();
 
   //Process Commander interface commands
   commander.run();
