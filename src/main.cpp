@@ -18,9 +18,9 @@
 #define power_supply_v 24
 
 // Pins
-#define MISO 19
-#define SCLK 18
-#define MOSI 23
+#define C_MISO 19
+#define C_SCLK 18
+#define C_MOSI 23
 #define SS0 5
 #define SS1 22
 
@@ -57,10 +57,9 @@ bool coasting0 = false;               // Motor 0 state: running or coasting
 bool coasting1 = false;               // Motor 1 state: running or coasting
 
 // Sensors and I2C
-MagneticSensorSPI sensor0 = MagneticSensorSPI(AS5048_SPI, SS0);
-MagneticSensorSPI sensor1 = MagneticSensorSPI(AS5048_SPI, SS1);
-SPIClass SPI_0(HSPI);
-SPIClass SPI_1(HSPI);
+MagneticSensorSPI sensor0 = MagneticSensorSPI(SS0, 14, 0x3FFF);
+MagneticSensorSPI sensor1 = MagneticSensorSPI(SS1, 14, 0x3FFF);
+SPIClass SPI_2(HSPI);
 
 // Motors and Drivers
 BLDCMotor motor0 = BLDCMotor(M0_pole_pairs, M0_phase_resistance);
@@ -93,10 +92,9 @@ void doMotor1(char* cmd);
 
 void setup() {
   //Initialize SPI
-  SPI_0.begin(SCLK, MISO, MOSI, SS0); //SCLK, MISO, MOSI, SS 
-  SPI_1.begin(SCLK, MISO, MOSI, SS1); //SCLK, MISO, MOSI, SS 
-  sensor0.init(&SPI_0);
-  sensor0.init(&SPI_1);
+  SPI_2.begin(); //SCLK, MISO, MOSI, SS 
+  sensor0.init(&SPI_2);
+  sensor1.init(&SPI_2);
 
   // Get initial offsets
   offset0 = sensor0.getAngle() * (180.0 / _PI);
@@ -167,8 +165,8 @@ void setup() {
 
   motor0.init();
   motor1.init();
-  // motor0.initFOC();
-  // motor1.initFOC();
+  motor0.initFOC();
+  motor1.initFOC();
 
   // Serial.println("Motors ready. Starting sequence...");
 
@@ -195,7 +193,6 @@ void loop() {
 
   if (currentMillis - previousMillis >= printInterval) {
     previousMillis = currentMillis;
-    Serial.println("Looping");
     printPositions();
   }
 
