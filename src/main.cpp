@@ -76,9 +76,9 @@ Commander commander = Commander();
 float offset0 = 0.0;
 float offset1 = 0.0;
 
-// Timing for serial output
-unsigned long previousMillis = 0;
-const long printInterval = 1000;  // Print position every second
+// // Timing for serial output
+ unsigned long previousMillis = 0;
+ const long printInterval = 1000;  // Print position every second
 
 // Function prototypes
 void controlMotor(BLDCMotor &motor, MagneticSensorSPI &sensor, float &offset,
@@ -92,7 +92,7 @@ void doMotor0(char* cmd);
 void doMotor1(char* cmd);
 
 void setup() {
-  // Initialize SPI
+  //Initialize SPI
   SPI_0.begin(SCLK, MISO, MOSI, SS0); //SCLK, MISO, MOSI, SS 
   SPI_1.begin(SCLK, MISO, MOSI, SS1); //SCLK, MISO, MOSI, SS 
   sensor0.init(&SPI_0);
@@ -145,69 +145,70 @@ void setup() {
   commander.add('M', doMotor0, "motor 0");
   commander.add('N', doMotor1, "motor 1");
 
-  // monitoring port
+  //monitoring port
   motor0.useMonitoring(Serial);
   motor1.useMonitoring(Serial);
 
-  // // monitor data formatting;
-  // motor0.monitor_start_char = '\0'; //!< monitor starting character
-  // motor0.monitor_end_char = '\0'; //!< monitor outputs ending character 
-  // motor0.monitor_separator = '\t'; //!< monitor outputs separation character
-  // motor1.monitor_start_char = '\0'; //!< monitor starting character
-  // motor1.monitor_end_char = '\0'; //!< monitor outputs ending character 
-  // motor1.monitor_separator = '\t'; //!< monitor outputs separation character
+  // monitor data formatting;
+  motor0.monitor_start_char = '\0'; //!< monitor starting character
+  motor0.monitor_end_char = '\0'; //!< monitor outputs ending character 
+  motor0.monitor_separator = '\t'; //!< monitor outputs separation character
+  motor1.monitor_start_char = '\0'; //!< monitor starting character
+  motor1.monitor_end_char = '\0'; //!< monitor outputs ending character 
+  motor1.monitor_separator = '\t'; //!< monitor outputs separation character
 
-  // //display variables
-  // motor0.monitor_variables = _MON_TARGET | _MON_VEL | _MON_ANGLE; // default _MON_TARGET | _MON_VOLT_Q | _MON_VEL | _MON_ANGLE
-  // motor1.monitor_variables = _MON_TARGET | _MON_VEL | _MON_ANGLE; // default _MON_TARGET | _MON_VOLT_Q | _MON_VEL | _MON_ANGLE
+  //display variables
+  motor0.monitor_variables = _MON_TARGET | _MON_VEL | _MON_ANGLE; // default _MON_TARGET | _MON_VOLT_Q | _MON_VEL | _MON_ANGLE
+  motor1.monitor_variables = _MON_TARGET | _MON_VEL | _MON_ANGLE; // default _MON_TARGET | _MON_VOLT_Q | _MON_VEL | _MON_ANGLE
 
-  // // downsampling
-  // motor0.monitor_downsample = 100; // default 10
-  // motor1.monitor_downsample = 100; // default 10
+  // downsampling
+  motor0.monitor_downsample = 100; // default 10
+  motor1.monitor_downsample = 100; // default 10
 
   motor0.init();
   motor1.init();
-  motor0.initFOC();
-  motor1.initFOC();
+  // motor0.initFOC();
+  // motor1.initFOC();
 
-  Serial.println("Motors ready. Starting sequence...");
+  // Serial.println("Motors ready. Starting sequence...");
 
-  //get the motors moving first
-  motor0.voltage_limit = power_supply_v;
-  motor1.voltage_limit = power_supply_v;
-  float steps=1000;
-  for (int i; i<=(steps); i++){
+  // //get the motors moving first
+  // motor0.voltage_limit = power_supply_v;
+  // motor1.voltage_limit = power_supply_v;
+  // float steps=1000;
+  // for (int i; i<=(steps); i++){
 
-    motor0.move(full_speed_velocity0*direction0);
-    motor1.move(full_speed_velocity1*direction1);
+  //   motor0.move(full_speed_velocity0*direction0);
+  //   motor1.move(full_speed_velocity1*direction1);
 
-    motor0.loopFOC();
-    motor1.loopFOC();
-  }
+  //   motor0.loopFOC();
+  //   motor1.loopFOC();
+  // }
 }
 
 void loop() {
   unsigned long currentMillis = millis();
 
   // Control motors
-  controlMotor(motor0, sensor0, offset0, full_speed_velocity0, direction0, coasting0, target_position0, reset_position0);
-  controlMotor(motor1, sensor1, offset1, full_speed_velocity1, direction1, coasting1, target_position1, reset_position1);
+  // controlMotor(motor0, sensor0, offset0, full_speed_velocity0, direction0, coasting0, target_position0, reset_position0);
+  // controlMotor(motor1, sensor1, offset1, full_speed_velocity1, direction1, coasting1, target_position1, reset_position1);
 
   if (currentMillis - previousMillis >= printInterval) {
     previousMillis = currentMillis;
-    //printPositions();
+    Serial.println("Looping");
+    printPositions();
   }
 
   // Core FOC loop
-  motor0.loopFOC();
-  motor1.loopFOC();
+  // motor0.loopFOC();
+  // motor1.loopFOC();
 
   // Output motor monitor data, comment out when not debugging, will impact performance.
   //motor0.monitor();
   //motor1.monitor();
 
   //Process Commander interface commands
-  commander.run();
+  //commander.run();
 }
 
 void controlMotor(BLDCMotor &motor, MagneticSensorSPI &sensor, float &offset, float full_speed_velocity, int direction, bool &coasting, float target_position, float reset_position) 
