@@ -3,35 +3,36 @@
 // Motor0 specs
 #define M0_pole_pairs 7
 #define M0_phase_resistance 10
-#define M0_KV 260
+#define M0_KV 50
 #define M0_motor_current_limit 0.5
 #define M0_motor_max_velocity 60
 
 // Motor1 specs
 #define M1_pole_pairs 7
 #define M1_phase_resistance 10
-#define M1_KV 260
+#define M1_KV 50
 #define M1_motor_current_limit 0.5
 #define M1_motor_max_velocity 60
 
 // Power Supply Specs
-#define power_supply_v 20
+#define power_supply_v 24
 
 // Pins
-#define SDA_0 19
-#define SCL_0 18
-#define SDA_1 23
-#define SCL_1 5
+#define MISO 19
+#define SCLK 18
+#define MOSI 23
+#define SS0 5
+#define SS1 22
 
 #define M0_phA 32
 #define M0_phB 33
 #define M0_phC 25
-#define M0_En 22
 
 #define M1_phA 26
 #define M1_phB 27
 #define M1_phC 14
-#define M1_En 12
+
+#define M_En 12
 
 //simpleFOC motor monitoring variables bitmap
 //current [A], voltage [V], velocity [rad/s], or position [rad]
@@ -56,17 +57,17 @@ bool coasting0 = false;               // Motor 0 state: running or coasting
 bool coasting1 = false;               // Motor 1 state: running or coasting
 
 // Sensors and I2C
-MagneticSensorI2C sensor0 = MagneticSensorI2C(AS5600_I2C);
-MagneticSensorI2C sensor1 = MagneticSensorI2C(AS5600_I2C);
-TwoWire I2C_0 = TwoWire(0);
-TwoWire I2C_1 = TwoWire(1);
+MagneticSensorSPI sensor0 = MagneticSensorSPI(AS5048_SPI, SS0);
+MagneticSensorSPI sensor1 = MagneticSensorSPI(AS5048_SPI, SS1);
+SPIClass SPI_0(HSPI);
+SPIClass SPI_1(HSPI);
 
 // Motors and Drivers
 BLDCMotor motor0 = BLDCMotor(M0_pole_pairs, M0_phase_resistance);
-BLDCDriver3PWM driver0 = BLDCDriver3PWM(M0_phA, M0_phB, M0_phC, M0_En);
+BLDCDriver3PWM driver0 = BLDCDriver3PWM(M0_phA, M0_phB, M0_phC);
 
 BLDCMotor motor1 = BLDCMotor(M1_pole_pairs, M1_phase_resistance);
-BLDCDriver3PWM driver1 = BLDCDriver3PWM(M1_phA, M1_phB, M1_phC, M1_En);
+BLDCDriver3PWM driver1 = BLDCDriver3PWM(M1_phA, M1_phB, M1_phC);
 
 //Commander interface
 Commander commander = Commander();
@@ -80,7 +81,7 @@ unsigned long previousMillis = 0;
 const long printInterval = 1000;  // Print position every second
 
 // Function prototypes
-void controlMotor(BLDCMotor &motor, MagneticSensorI2C &sensor, float &offset,
+void controlMotor(BLDCMotor &motor, MagneticSensorSPI &sensor, float &offset,
                   float full_speed_velocity, int direction, bool &coasting, float target_position, float reset_position);
 float normalizeAngle(float angle, float offset);
 void printPositions();
@@ -91,11 +92,11 @@ void doMotor0(char* cmd);
 void doMotor1(char* cmd);
 
 void setup() {
-  // Initialize I2C
-  I2C_0.begin(SDA_0, SCL_0, 400000);
-  I2C_1.begin(SDA_1, SCL_1, 400000);
-  sensor0.init(&I2C_0);
-  sensor1.init(&I2C_1);
+  // Initialize SPI
+  SPI_0.begin(SCLK, MISO, MOSI, SS0); //SCLK, MISO, MOSI, SS 
+  SPI_1.begin(SCLK, MISO, MOSI, SS1); //SCLK, MISO, MOSI, SS 
+  sensor0.init(&SPI_0);
+  sensor0.init(&SPI_1);
 
   // Get initial offsets
   offset0 = sensor0.getAngle() * (180.0 / _PI);
@@ -209,7 +210,7 @@ void loop() {
   commander.run();
 }
 
-void controlMotor(BLDCMotor &motor, MagneticSensorI2C &sensor, float &offset, float full_speed_velocity, int direction, bool &coasting, float target_position, float reset_position) 
+void controlMotor(BLDCMotor &motor, MagneticSensorSPI &sensor, float &offset, float full_speed_velocity, int direction, bool &coasting, float target_position, float reset_position) 
 {
   float angle = normalizeAngle(sensor.getAngle() * (180.0 / _PI), offset);
   if(direction > 0){
@@ -239,6 +240,8 @@ float normalizeAngle(float angle, float offset) {
 }
 
 void printPositions() {
+  sensor0.update(); // If the simpleFOC library version is 2.2.0 or above, you need to uncomment this line
+  sensor1.update(); // If the simpleFOC library version is 2.2.0 or above, you need to uncomment this line
   float angle0 = normalizeAngle(sensor0.getAngle() * (180.0 / _PI), offset0);
   float angle1 = normalizeAngle(sensor1.getAngle() * (180.0 / _PI), offset1);
 
