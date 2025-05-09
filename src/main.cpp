@@ -1,14 +1,14 @@
 #include <SimpleFOC.h>
 
 // Motor0 specs
-#define M0_pole_pairs 7
+#define M0_pole_pairs 14
 #define M0_phase_resistance 10
 #define M0_KV 50
 #define M0_motor_current_limit 0.5
 #define M0_motor_max_velocity 60
 
 // Motor1 specs
-#define M1_pole_pairs 7
+#define M1_pole_pairs 14
 #define M1_phase_resistance 10
 #define M1_KV 50
 #define M1_motor_current_limit 0.5
@@ -51,15 +51,15 @@ const float target_position1 = 180.0; // Motor 1 target position
 const float reset_position1 = 0.0;    // Motor 1 reset position
 const int   direction0 = -11;           // Motor 0 direction of rotation: 1 CW, -1 CCW
 const int   direction1 = 1;          // Motor 1 direction of rotation: 1 CW, -1 CCW
-float full_speed_velocity0 = 1000.0;    // Motor 0 full speed velocity
-float full_speed_velocity1 = 1000.0;   // Motor 1 full speed velocity
+float full_speed_velocity0 = M0_motor_max_velocity;    // Motor 0 full speed velocity
+float full_speed_velocity1 = M1_motor_max_velocity;   // Motor 1 full speed velocity
 bool coasting0 = false;               // Motor 0 state: running or coasting
 bool coasting1 = false;               // Motor 1 state: running or coasting
 
 // Sensors and I2C
 MagneticSensorSPI sensor0 = MagneticSensorSPI(SS0, 14, 0x3FFF);
 MagneticSensorSPI sensor1 = MagneticSensorSPI(SS1, 14, 0x3FFF);
-SPIClass SPI_2(HSPI);
+SPIClass SPI_2(VSPI);
 
 // Motors and Drivers
 BLDCMotor motor0 = BLDCMotor(M0_pole_pairs, M0_phase_resistance);
