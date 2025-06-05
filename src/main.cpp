@@ -1,5 +1,52 @@
 #include <SimpleFOC.h>
 
+//////////////////////////////////////////////
+//        RemoteXY include library          //
+//////////////////////////////////////////////
+
+// you can enable debug logging to Serial at 115200
+//#define REMOTEXY__DEBUGLOG    
+
+// RemoteXY select connection mode and include library 
+#define REMOTEXY_MODE__SOFTSERIAL
+
+#include <SoftwareSerial.h>
+
+// RemoteXY connection settings 
+#define REMOTEXY_SERIAL_RX 2
+#define REMOTEXY_SERIAL_TX 3
+#define REMOTEXY_SERIAL_SPEED 9600
+
+#include "BLEDevice.h"
+#include <RemoteXY.h>
+
+// RemoteXY GUI configuration  
+#pragma pack(push, 1)  
+uint8_t RemoteXY_CONF[] =   // 54 bytes
+  { 255,4,0,0,0,47,0,19,0,0,0,0,31,1,106,200,1,1,3,0,
+  10,39,34,24,24,49,4,26,31,79,78,0,31,79,70,70,0,5,34,96,
+  60,60,32,2,26,31,4,12,84,9,91,0,2,26 };
+  
+// this structure defines all the variables and events of your control interface 
+struct {
+
+    // input variables
+  uint8_t VEnable_Btn; // =1 if state is ON, else =0
+  int8_t joystick_x; // from -100 to 100
+  int8_t joystick_y; // from -100 to 100
+  int8_t Vspeed; // from 0 to 100
+
+    // other variable
+  uint8_t connect_flag;  // =1 if wire connected, else =0
+
+} RemoteXY;   
+#pragma pack(pop)
+ 
+/////////////////////////////////////////////
+//           END RemoteXY include          //
+/////////////////////////////////////////////
+
+
 // Motor0 specs
 #define M0_pole_pairs 14
 #define M0_phase_resistance 10
@@ -58,7 +105,7 @@ bool coasting1 = false;               // Motor 1 state: running or coasting
 
 // Sensors and I2C
 MagneticSensorSPI sensor0 = MagneticSensorSPI(SS0, 14, 0x3FFF);
-MagneticSensorSPI sensor1 = MagneticSensorSPI(SS1, 14, 0x3FFF);
+MagneticSensorSPI sensor1 = MagneticSensorSPI(SS0, 14, 0x3FFF); //shoud be ss1 but testing
 SPIClass SPI_2(VSPI);
 
 // Motors and Drivers
@@ -77,7 +124,7 @@ float offset1 = 0.0;
 
 // // Timing for serial output
  unsigned long previousMillis = 0;
- const long printInterval = 1000;  // Print position every second
+ const long printInterval = 300;  // Print position every second
 
 // Function prototypes
 void controlMotor(BLDCMotor &motor, MagneticSensorSPI &sensor, float &offset,
@@ -91,8 +138,19 @@ void doMotor0(char* cmd);
 void doMotor1(char* cmd);
 
 void setup() {
+  //Initialize Remote XY
+  remotexy = new CRemoteXY (
+    RemoteXY_CONF_PROGMEM, 
+    &RemoteXY, 
+    new CRemoteXYStream_BLEDevice (
+      "Momentum_Engine"       // REMOTEXY_BLUETOOTH_NAME
+    )
+  ); 
+
   //Initialize SPI
   SPI_2.begin(); //SCLK, MISO, MOSI, SS 
+  sensor0.clock_speed=2000000;
+  sensor1.clock_speed=2000000;
   sensor0.init(&SPI_2);
   sensor1.init(&SPI_2);
 
@@ -185,6 +243,7 @@ void setup() {
 }
 
 void loop() {
+  remotexy->handler ();
   unsigned long currentMillis = millis();
 
   // Control motors
