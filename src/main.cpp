@@ -67,7 +67,7 @@ struct {
 #define M1_motor_max_velocity 60
 
 // Power Supply Specs
-#define power_supply_v 24
+#define power_supply_v 20
 
 // Pins
 #define C_MISO 19
@@ -110,9 +110,6 @@ bool coasting1 = false;               // Motor 1 state: running or coasting
 
 // Sensors and I2C
 
-//MagneticSensorSPI sensor0 = MagneticSensorSPI(SS0, 14, 0x3FFF);
-//MagneticSensorSPI sensor1 = MagneticSensorSPI(SS0, 14, 0x3FFF); //shoud be ss1 but testing
-
 MagneticSensorAS5048A sensor0(SS0);
 MagneticSensorAS5048A sensor1(SS1);
 
@@ -134,10 +131,10 @@ float offset1 = 0.0;
 
 // // Timing for serial output
  unsigned long previousMillis = 0;
- const long printInterval = 300;  // Print position every second
+ const long printInterval = 1000;  // Print position every second
 
 // Function prototypes
-void controlMotor(BLDCMotor &motor, MagneticSensorSPI &sensor, float &offset,
+void controlMotor(BLDCMotor &motor, MagneticSensorAS5048A &sensor, float &offset,
                   float full_speed_velocity, int direction, bool &coasting, float target_position, float reset_position);
 float normalizeAngle(float angle, float offset);
 void printPositions();
@@ -210,45 +207,45 @@ void setup() {
   commander.add('M', doMotor0, "motor 0");
   commander.add('N', doMotor1, "motor 1");
 
-  //monitoring port
+  // //monitoring port
   motor0.useMonitoring(Serial);
   motor1.useMonitoring(Serial);
 
-  // monitor data formatting;
-  motor0.monitor_start_char = '\0'; //!< monitor starting character
-  motor0.monitor_end_char = '\0'; //!< monitor outputs ending character 
-  motor0.monitor_separator = '\t'; //!< monitor outputs separation character
-  motor1.monitor_start_char = '\0'; //!< monitor starting character
-  motor1.monitor_end_char = '\0'; //!< monitor outputs ending character 
-  motor1.monitor_separator = '\t'; //!< monitor outputs separation character
+  // // monitor data formatting;
+  // motor0.monitor_start_char = '\0'; //!< monitor starting character
+  // motor0.monitor_end_char = '\0'; //!< monitor outputs ending character 
+  // motor0.monitor_separator = '\t'; //!< monitor outputs separation character
+  // motor1.monitor_start_char = '\0'; //!< monitor starting character
+  // motor1.monitor_end_char = '\0'; //!< monitor outputs ending character 
+  // motor1.monitor_separator = '\t'; //!< monitor outputs separation character
 
-  //display variables
+  // //display variables
   motor0.monitor_variables = _MON_TARGET | _MON_VEL | _MON_ANGLE; // default _MON_TARGET | _MON_VOLT_Q | _MON_VEL | _MON_ANGLE
   motor1.monitor_variables = _MON_TARGET | _MON_VEL | _MON_ANGLE; // default _MON_TARGET | _MON_VOLT_Q | _MON_VEL | _MON_ANGLE
 
-  // downsampling
-  motor0.monitor_downsample = 100; // default 10
-  motor1.monitor_downsample = 100; // default 10
+  // // downsampling
+  motor0.monitor_downsample = 1000; // default 10
+  motor1.monitor_downsample = 1000; // default 10
 
   motor0.init();
   motor1.init();
   motor0.initFOC();
   motor1.initFOC();
 
-  // Serial.println("Motors ready. Starting sequence...");
+  Serial.println("Motors ready. Starting sequence...");
 
-  // //get the motors moving first
-  // motor0.voltage_limit = power_supply_v;
-  // motor1.voltage_limit = power_supply_v;
-  // float steps=1000;
-  // for (int i; i<=(steps); i++){
+  //get the motors moving first
+  motor0.voltage_limit = power_supply_v;
+  motor1.voltage_limit = power_supply_v;
+  float steps=1000;
+  for (int i; i<=(steps); i++){
 
-  //   motor0.move(full_speed_velocity0*direction0);
-  //   motor1.move(full_speed_velocity1*direction1);
+    motor0.move(full_speed_velocity0*direction0);
+    motor1.move(full_speed_velocity1*direction1);
 
-  //   motor0.loopFOC();
-  //   motor1.loopFOC();
-  // }
+    motor0.loopFOC();
+    motor1.loopFOC();
+  }
 }
 
 void loop() {
@@ -256,27 +253,28 @@ void loop() {
   unsigned long currentMillis = millis();
 
   // Control motors
-  // controlMotor(motor0, sensor0, offset0, full_speed_velocity0, direction0, coasting0, target_position0, reset_position0);
-  // controlMotor(motor1, sensor1, offset1, full_speed_velocity1, direction1, coasting1, target_position1, reset_position1);
+  controlMotor(motor0, sensor0, offset0, full_speed_velocity0, direction0, coasting0, target_position0, reset_position0);
+  controlMotor(motor1, sensor1, offset1, full_speed_velocity1, direction1, coasting1, target_position1, reset_position1);
 
+  // print sensor positions for debugging
   if (currentMillis - previousMillis >= printInterval) {
     previousMillis = currentMillis;
     printPositions();
   }
 
   // Core FOC loop
-  // motor0.loopFOC();
-  // motor1.loopFOC();
+  motor0.loopFOC();
+  motor1.loopFOC();
 
   // Output motor monitor data, comment out when not debugging, will impact performance.
-  //motor0.monitor();
-  //motor1.monitor();
+  // motor0.monitor();
+  // motor1.monitor();
 
   //Process Commander interface commands
-  //commander.run();
+  commander.run();
 }
 
-void controlMotor(BLDCMotor &motor, MagneticSensorSPI &sensor, float &offset, float full_speed_velocity, int direction, bool &coasting, float target_position, float reset_position) 
+void controlMotor(BLDCMotor &motor, MagneticSensorAS5048A &sensor, float &offset, float full_speed_velocity, int direction, bool &coasting, float target_position, float reset_position) 
 {
   float angle = normalizeAngle(sensor.getAngle() * (180.0 / _PI), offset);
   if(direction > 0){
@@ -310,11 +308,17 @@ void printPositions() {
   sensor1.update(); // If the simpleFOC library version is 2.2.0 or above, you need to uncomment this line
   float angle0 = normalizeAngle(sensor0.getAngle() * (180.0 / _PI), offset0);
   float angle1 = normalizeAngle(sensor1.getAngle() * (180.0 / _PI), offset1);
+  float shaft0 = motor0.shaft_angle;
+  float shaft1 = motor1.shaft_angle;
 
   Serial.print("Sensor0 angle: ");
   Serial.print(angle0, 2);  // Print with 2 decimal places
+  Serial.print("°, Shaft0 angle: ");
+  Serial.print(shaft0, 2);  // Print with 2 decimal places
   Serial.print("°, Sensor1 angle: ");
   Serial.print(angle1, 2);  // Print with 2 decimal places
+  Serial.print("°, Shaft1 angle: ");
+  Serial.print(shaft1, 2);  // Print with 2 decimal places
   Serial.println("°");
 }
 
