@@ -1,4 +1,9 @@
-#include <SimpleFOC.h>
+#include "Arduino.h"
+#include "Wire.h"
+#include "SPI.h"
+#include "SimpleFOC.h"
+#include "SimpleFOCDrivers.h"
+#include "encoders/as5048a/MagneticSensorAS5048A.h"
 
 //////////////////////////////////////////////
 //        RemoteXY include library          //
@@ -69,7 +74,7 @@ struct {
 #define C_SCLK 18
 #define C_MOSI 23
 #define SS0 5
-#define SS1 22
+#define SS1 15
 
 #define M0_phA 32
 #define M0_phB 33
@@ -104,8 +109,13 @@ bool coasting0 = false;               // Motor 0 state: running or coasting
 bool coasting1 = false;               // Motor 1 state: running or coasting
 
 // Sensors and I2C
-MagneticSensorSPI sensor0 = MagneticSensorSPI(SS0, 14, 0x3FFF);
-MagneticSensorSPI sensor1 = MagneticSensorSPI(SS0, 14, 0x3FFF); //shoud be ss1 but testing
+
+//MagneticSensorSPI sensor0 = MagneticSensorSPI(SS0, 14, 0x3FFF);
+//MagneticSensorSPI sensor1 = MagneticSensorSPI(SS0, 14, 0x3FFF); //shoud be ss1 but testing
+
+MagneticSensorAS5048A sensor0(SS0);
+MagneticSensorAS5048A sensor1(SS1);
+
 SPIClass SPI_2(VSPI);
 
 // Motors and Drivers
@@ -138,6 +148,7 @@ void doMotor0(char* cmd);
 void doMotor1(char* cmd);
 
 void setup() {
+
   //Initialize Remote XY
   remotexy = new CRemoteXY (
     RemoteXY_CONF_PROGMEM, 
@@ -149,8 +160,6 @@ void setup() {
 
   //Initialize SPI
   SPI_2.begin(); //SCLK, MISO, MOSI, SS 
-  sensor0.clock_speed=2000000;
-  sensor1.clock_speed=2000000;
   sensor0.init(&SPI_2);
   sensor1.init(&SPI_2);
 
