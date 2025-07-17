@@ -57,14 +57,14 @@ struct {
 #define M0_phase_resistance 10
 #define M0_KV 50
 #define M0_motor_current_limit 0.5
-#define M0_motor_max_velocity 60
+#define M0_motor_max_velocity 6
 
 // Motor1 specs
 #define M1_pole_pairs 14
 #define M1_phase_resistance 10
 #define M1_KV 50
 #define M1_motor_current_limit 0.5
-#define M1_motor_max_velocity 60
+#define M1_motor_max_velocity 6
 
 // Power Supply Specs
 #define power_supply_v 20
@@ -73,8 +73,8 @@ struct {
 #define C_MISO 19
 #define C_SCLK 18
 #define C_MOSI 23
-#define SS0 5
-#define SS1 15
+#define SS0 15
+#define SS1 5
 
 #define M0_phA 32
 #define M0_phB 33
@@ -101,7 +101,7 @@ const float target_position0 = 180.0;  // Motor 0 target position
 const float reset_position0 = 0.0;    // Motor 0 reset position
 const float target_position1 = 180.0; // Motor 1 target position
 const float reset_position1 = 0.0;    // Motor 1 reset position
-const int   direction0 = -11;           // Motor 0 direction of rotation: 1 CW, -1 CCW
+const int   direction0 = -1;           // Motor 0 direction of rotation: 1 CW, -1 CCW
 const int   direction1 = 1;          // Motor 1 direction of rotation: 1 CW, -1 CCW
 float full_speed_velocity0 = M0_motor_max_velocity;    // Motor 0 full speed velocity
 float full_speed_velocity1 = M1_motor_max_velocity;   // Motor 1 full speed velocity
@@ -146,6 +146,9 @@ void doMotor1(char* cmd);
 
 void setup() {
 
+  // use monitoring with the BLDCMotor
+  Serial.begin(115200);
+
   //Initialize Remote XY
   remotexy = new CRemoteXY (
     RemoteXY_CONF_PROGMEM, 
@@ -153,7 +156,8 @@ void setup() {
     new CRemoteXYStream_BLEDevice (
       "Momentum_Engine"       // REMOTEXY_BLUETOOTH_NAME
     )
-  ); 
+  );
+
 
   //Initialize SPI
   SPI_2.begin(); //SCLK, MISO, MOSI, SS 
@@ -164,9 +168,14 @@ void setup() {
   offset0 = sensor0.getAngle() * (180.0 / _PI);
   offset1 = sensor1.getAngle() * (180.0 / _PI);
 
-  // Link sensors to motors
-  motor0.linkSensor(&sensor0);
-  motor1.linkSensor(&sensor1);
+  Serial.print("Sensor0 Value: ");
+  Serial.print(sensor0.getAngle());
+  Serial.print("  offset0 Value: ");
+  Serial.print(offset0);
+  Serial.print(",  Sensor1 Value: ");
+  Serial.print(sensor1.getAngle());
+  Serial.print("  offset1 Value: ");
+  Serial.println(offset1);
 
   // Initialize drivers
   driver0.voltage_power_supply = power_supply_v;
@@ -176,6 +185,10 @@ void setup() {
   driver1.voltage_power_supply = power_supply_v;
   driver1.init();
   motor1.linkDriver(&driver1);
+
+  // Link sensors to motors
+  motor0.linkSensor(&sensor0);
+  motor1.linkSensor(&sensor1);
 
   // Configure motor settings
   motor0.foc_modulation = FOCModulationType::SpaceVectorPWM;
@@ -198,9 +211,6 @@ void setup() {
 
   motor0.current_limit = M0_motor_current_limit;
   motor1.current_limit = M1_motor_current_limit;
-
-  // use monitoring with the BLDCMotor
-  Serial.begin(115200);
 
   // Initialize Commander interface
   commander.add('T', doTarget, "target velocity");
@@ -237,7 +247,7 @@ void setup() {
   //get the motors moving first
   motor0.voltage_limit = power_supply_v;
   motor1.voltage_limit = power_supply_v;
-  float steps=1000;
+  float steps=10000;
   for (int i; i<=(steps); i++){
 
     motor0.move(full_speed_velocity0*direction0);
@@ -253,8 +263,8 @@ void loop() {
   unsigned long currentMillis = millis();
 
   // Control motors
-  controlMotor(motor0, sensor0, offset0, full_speed_velocity0, direction0, coasting0, target_position0, reset_position0);
-  controlMotor(motor1, sensor1, offset1, full_speed_velocity1, direction1, coasting1, target_position1, reset_position1);
+  // controlMotor(motor0, sensor0, offset0, full_speed_velocity0, direction0, coasting0, target_position0, reset_position0);
+  // controlMotor(motor1, sensor1, offset1, full_speed_velocity1, direction1, coasting1, target_position1, reset_position1);
 
   // print sensor positions for debugging
   if (currentMillis - previousMillis >= printInterval) {
@@ -263,8 +273,8 @@ void loop() {
   }
 
   // Core FOC loop
-  motor0.loopFOC();
-  motor1.loopFOC();
+  // motor0.loopFOC();
+  // motor1.loopFOC();
 
   // Output motor monitor data, comment out when not debugging, will impact performance.
   // motor0.monitor();
@@ -308,8 +318,8 @@ void printPositions() {
   sensor1.update(); // If the simpleFOC library version is 2.2.0 or above, you need to uncomment this line
   float angle0 = normalizeAngle(sensor0.getAngle() * (180.0 / _PI), offset0);
   float angle1 = normalizeAngle(sensor1.getAngle() * (180.0 / _PI), offset1);
-  float shaft0 = motor0.shaft_angle;
-  float shaft1 = motor1.shaft_angle;
+  float shaft0 = motor0.shaft_angle*(180.0 / _PI);
+  float shaft1 = motor1.shaft_angle*(180.0 / _PI);
 
   Serial.print("Sensor0 angle: ");
   Serial.print(angle0, 2);  // Print with 2 decimal places
